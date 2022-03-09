@@ -1,0 +1,32 @@
+abs:
+  desc: "这里是个描述"
+  paddle:
+    api_name: "paddle.abs"
+    params:
+        x:
+          random: true
+          type: "Tensor"
+          shape: [3, 3, 3]
+        a:
+          value: "aaa"
+        b:
+          value: "bbb"
+
+add:
+  desc: "add 方法"
+  paddle:
+    api_name: "paddle.add"
+    params:
+        x:
+          random: true
+          type: "Tensor"
+          dtype: "float32"
+          shape: [2, 2]
+          range: [-100, 100]
+        y:
+          random: true
+          type: "Tensor"
+          dtype: "float32"
+          shape: [2, 2]
+          range: [-100, 100]
+        
