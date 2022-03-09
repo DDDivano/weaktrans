@@ -5,7 +5,7 @@
 
 import paddle
 import numpy as np
-from logger import Logger
+from wt.logger import Logger
 
 
 class Framework(object):

@@ -4,7 +4,7 @@
 # encoding=utf-8 vi:ts=4:sw=4:expandtab:ft=python
 
 import yaml
-import logger
+from wt.logger import Logger
 
 
 class YamlLoader(object):
@@ -14,7 +14,7 @@ class YamlLoader(object):
                 self.yml = yaml.load(f, Loader=yaml.FullLoader)
         except Exception as e:
             print(e)
-        self.logger = logger.Logger(__class__.__name__)
+        self.logger = Logger(__class__.__name__)
 
     def __str__(self):
         return str(self.yml)
