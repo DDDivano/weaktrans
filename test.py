@@ -10,7 +10,7 @@ from wt.weaktrans import WeakTrans
 # loading yaml
 yml = YamlLoader("./test.yml")
 # choose case
-jit_case = WeakTrans(yml.get_case_info("add"))
+jit_case = WeakTrans(yml.get_case_info("conv2d"))
 layer = jit_case.get_layer("paddle")
 loss = paddle.mean(layer)
 print(loss)

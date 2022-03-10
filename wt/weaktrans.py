@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 # @author DDDivano
 # encoding=utf-8 vi:ts=4:sw=4:expandtab:ft=python
+import random
 
 import paddle
 import numpy as np
@@ -14,14 +15,14 @@ class Framework(object):
 
 
 class WeakTrans(object):
-    def __init__(self, case, default_type=np.float32, seed=None):
+    def __init__(self, case, logger, default_type=np.float32, seed=None, ):
         np.random.seed(seed)
         self.case = case
         self.default_type = default_type
         self.params = dict()
-        self.logger = Logger(__class__.__name__)
+        self.logger = logger
         # desc
-        self.logger.get_log().info(case.get("desc", "没有描述"))
+        self.logger.get_log().info(self.case.get("desc", "没有描述"))
         self.logger.get_log().info("default_type: {}".format(self.default_type))
         # 加载
         self._run()
@@ -38,6 +39,7 @@ class WeakTrans(object):
         self._generate_params(Framework.PADDLE)
 
     def get_layer(self, framework):
+
         # lazy func
         func = self.get_func(framework)
         params = self.get_input(framework)
@@ -81,7 +83,7 @@ class WeakTrans(object):
         for key, value in params.items():
             kwargs[key] = self._params_transform(key, value)
             kwargs_for_log[key] = kwargs[key]
-            if value.get("type") == "Tensor":
+            if isinstance(value, dict) and value.get("type") == "Tensor":
                 del(kwargs_for_log[key])
                 # tensor需要根据不同的框架转换
                 if framework == Framework.PADDLE:

@@ -22,3 +22,12 @@ class YamlLoader(object):
     def get_case_info(self, case_name):
         self.logger.get_log().info("get ->{}<- case profile".format(case_name))
         return self.yml.get(case_name)
+
+    def get_all_case_name(self):
+        # 获取全部case name
+        return self.yml.keys()
+
+    def get_logger(self):
+        return self.logger
+
+
