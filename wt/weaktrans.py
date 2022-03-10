@@ -6,7 +6,7 @@ import random
 
 import paddle
 import numpy as np
-from wt.logger import Logger
+from inspect import isclass
 
 
 class Framework(object):
@@ -43,7 +43,13 @@ class WeakTrans(object):
         # lazy func
         func = self.get_func(framework)
         params = self.get_input(framework)
-        return eval(func)(**params)
+        if isclass(eval(func)):
+            data = params["data"]
+            del(params["data"])
+            obj = eval(func)(**params)
+            return obj(data)
+        else:
+            return eval(func)(**params)
 
     def get_input(self, framework):
         # 获取参数输入

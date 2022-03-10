@@ -45,3 +45,20 @@ conv2d:
         range: [ -1, 1 ]
       padding: 0
       groups: 1
+
+Conv2D:
+  desc: "卷 积 (类)"
+  paddle:
+    api_name: "paddle.nn.Conv2D"
+    params:
+      data:
+        random: true
+        type: "Tensor"
+        dtype: "float32"
+        shape: [2, 3, 4, 4]
+        range: [ -1, 1]
+      kernel_size:
+        value: [3, 3]
+      in_channels: 3
+      out_channels: 1
+
