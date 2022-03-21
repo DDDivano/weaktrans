@@ -62,6 +62,7 @@ class JitTrans(WeakTrans):
             self.func_type = 'class'
             # 仅实例化一次，防止多次实例化后，因为随机种子不固定导致多个结果值res不相等
             self.obj = BuildClass(self.in_params, self.func)
+            self.obj.eval()
             self.jit_obj = paddle.jit.to_static(self.obj)
         else:
             self.func_type = 'func'
@@ -93,8 +94,8 @@ class JitTrans(WeakTrans):
             exp = self.obj(inputs_value)
         else:
             exp = test_jit(self.in_tensor, self.in_params, self.func)
-            print('net is: ', test_jit)
-            print(exp)
+            # print('net is: ', test_jit)
+            # print(exp)
         return exp
 
     def mk_res(self):
@@ -105,8 +106,8 @@ class JitTrans(WeakTrans):
         else:
             jit = paddle.jit.to_static(test_jit)
             res = jit(self.in_tensor, self.in_params, self.func)
-            print('jit is: ', jit)
-            print(res)
+            # print('jit is: ', jit)
+            # print(res)
         return res
 
     def jit_save(self):
@@ -121,15 +122,15 @@ class JitTrans(WeakTrans):
         """
         if self.func_type == 'class':
             inputs_value = sort_intensor(self.in_tensor)
-            exp = self.jit_obj(inputs_value)
+            exp = self.jit_obj(inputs_value)  # 此行用于构建inputSpec,不可删除
             paddle.jit.save(self.jit_obj, path=os.path.join(self.jit_save_path, self.get_func("paddle")))
         else:
             jit = paddle.jit.to_static(test_jit)
-            print("jit save start-----")
-            print("in_tensor is: {}".format(self.in_tensor))
-            print("in_params is: {}".format(self.in_params))
-            print("func is: {}".format(self.func))
-            exp = jit(self.in_tensor, self.in_params, self.func)
+            # print("jit save start-----")
+            # print("in_tensor is: {}".format(self.in_tensor))
+            # print("in_params is: {}".format(self.in_params))
+            # print("func is: {}".format(self.func))
+            exp = jit(self.in_tensor, self.in_params, self.func)  # 此行用于构建inputSpec,不可删除
             paddle.jit.save(jit, path=os.path.join(self.jit_save_path, self.get_func("paddle")))
 
     def jit_load(self):
@@ -137,8 +138,8 @@ class JitTrans(WeakTrans):
         jit = paddle.jit.load(os.path.join(self.jit_save_path, self.get_func("paddle")))
         inputs_value = sort_intensor(self.in_tensor)
         res = jit(*inputs_value)
-        print('jit load is: ', jit)
-        print(res)
+        # print('jit load is: ', jit)
+        # print(res)
         return res
 
     def infer_load(self):
@@ -158,25 +159,33 @@ class JitTrans(WeakTrans):
         output_handle = predictor.get_output_handle(output_names[0])
         infer_res = output_handle.copy_to_cpu()
 
-        print('***' * 30)
-        print(infer_res)
+        # print('***' * 30)
+        # print(infer_res)
         return infer_res
 
     def jit_run(self):
         """测试运行流程"""
         exp = self.mk_exp()
-        print(exp)
+        print('exp is: ', exp)
         to_static_res = self.mk_res()
-        print(to_static_res)
+        print('to_static_res is: ', to_static_res)
+        print('exp - to_static_res is: ', exp[0] - to_static_res[0])
         self.jit_save()
         load_res = self.jit_load()
-        print(load_res)
-        compare(to_static_res.numpy(), exp.numpy(), self.atol, self.rtol)
-        compare(load_res.numpy(), exp.numpy(), self.atol, self.rtol)
-        # 若是nn.Layer组网的情况，则需要进一步测试推理部署结果
-        if self.func_type == 'class':
+        print('load_res is: ', load_res)
+        print('load_res[0] is: ', load_res[0])
+        print('exp - load_res is: ', exp[0] - load_res[0])
+        compare(to_static_res, exp, self.atol, self.rtol)
+        compare(load_res, exp, self.atol, self.rtol)
+        # 若是nn.Layer组网且有参数pdiparams的情况，则需要进一步测试推理部署结果
+        if self.func_type == 'class' and os.path.exists(
+                os.path.join(self.jit_save_path, self.get_func("paddle") + '.pdiparams')):
             infer_res = self.infer_load()
-            compare(infer_res, exp.numpy(), self.atol, self.rtol)
+            # print('infer_res is: {}'.format(infer_res.shape))
+            # print('infer_exp is: {}'.format(exp[1].shape))
+            if isinstance(exp, (list, tuple)):
+                exp = exp[0]
+            compare(infer_res, exp, self.atol, self.rtol)
 
 
 def compare(result, expect, delta=1e-10, rtol=1e-10):
@@ -187,10 +196,17 @@ def compare(result, expect, delta=1e-10, rtol=1e-10):
     :param delta: 误差值
     :return:
     """
-    if type(result) == np.ndarray:
-        if type(expect) == list:
-            expect = expect[0]
-        expect = np.array(expect)
+    if isinstance(expect, paddle.Tensor) or type(expect) == np.ndarray:
+        # if type(expect) == list:
+        #     expect = expect[0]
+        if isinstance(result, paddle.Tensor):
+            result = result.numpy()
+        if isinstance(expect, paddle.Tensor):
+            expect = expect.numpy()
+        # print("-----" * 30)
+        # print(result)
+        # print("=====" * 30)
+        # print(expect)
         res = np.allclose(result, expect, atol=delta, rtol=rtol, equal_nan=True)
         # 出错打印错误数据
         if res is False:
@@ -203,9 +219,15 @@ def compare(result, expect, delta=1e-10, rtol=1e-10):
         assert res
         assert result.shape == expect.shape
         assert result.dtype == expect.dtype
-    elif type(result) == list or type(result) == tuple:
-        for i in range(len(result)):
-            if isinstance(result[i], (np.generic, np.ndarray)):
-                compare(result[i], expect[i], delta, rtol)
+    elif type(expect) == list or type(expect) == tuple:
+        for i in range(len(expect)):
+            if isinstance(result, (np.generic, np.ndarray)) or isinstance(result, paddle.Tensor):
+                if i > 0:
+                    break
+            # if isinstance(result[i], (np.generic, np.ndarray)) or isinstance(result, paddle.Tensor):
+                compare(result, expect[i], delta, rtol)
+
             else:
-                compare(result[i].numpy(), expect[i], delta, rtol)
+                compare(result[i], expect[i], delta, rtol)
+    else:
+        raise Exception('expect is unknown data struction in compare_tool!!!')

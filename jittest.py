@@ -6,11 +6,17 @@ main_test
 """
 from wt.yaml_loader import YamlLoader
 from wt.jittrans import JitTrans
+from wt.weaktrans import WeakTrans
 
 
 # loading yaml
 def test():
-    yml = YamlLoader("test.yml")
-    jit_case = JitTrans(yml.get_case_info("conv2d"), logger=yml.logger)
+    yml = YamlLoader("nn.yml")
+    jit_case = JitTrans(yml.get_case_info("GRUCell"), logger=yml.logger)
     jit_case.jit_run()
+
+
+yml = YamlLoader("nn.yml")
+jit_case = JitTrans(yml.get_case_info("Conv2D"), logger=yml.logger)
+jit_case.jit_run()
 
