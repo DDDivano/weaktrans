@@ -91,6 +91,7 @@ class JitTrans(WeakTrans):
         """获取动态图结果"""
         if self.func_type == 'class':
             inputs_value = sort_intensor(self.in_tensor)
+            # print('inputs_value is: ', inputs_value)
             exp = self.obj(inputs_value)
         else:
             exp = test_jit(self.in_tensor, self.in_params, self.func)
@@ -174,14 +175,14 @@ class JitTrans(WeakTrans):
         load_res = self.jit_load()
         print('load_res is: ', load_res)
         print('load_res[0] is: ', load_res[0])
-        print('exp - load_res is: ', exp[0] - load_res[0])
+        # print('exp - load_res is: ', exp - load_res)
         compare(to_static_res, exp, self.atol, self.rtol)
         compare(load_res, exp, self.atol, self.rtol)
         # 若是nn.Layer组网且有参数pdiparams的情况，则需要进一步测试推理部署结果
         if self.func_type == 'class' and os.path.exists(
                 os.path.join(self.jit_save_path, self.get_func("paddle") + '.pdiparams')):
             infer_res = self.infer_load()
-            # print('infer_res is: {}'.format(infer_res.shape))
+            print('infer_res is: {}'.format(infer_res))
             # print('infer_exp is: {}'.format(exp[1].shape))
             if isinstance(exp, (list, tuple)):
                 exp = exp[0]
