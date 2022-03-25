@@ -9,12 +9,13 @@ import logging
 import numpy as np
 import paddle
 import paddle.inference as paddle_infer
+from paddle.static import InputSpec
 from wt.weaktrans import WeakTrans
 from inspect import isclass
 import shutil
 
 
-def test_jit(a, in_params, func):
+def naive_func(a, in_params, func):
     """用于动转静的方法"""
     layer = eval(func)(**a, **in_params)
     return layer
@@ -37,6 +38,61 @@ class BuildClass(paddle.nn.Layer):
         return x
 
 
+class BuildFunc(paddle.nn.Layer):
+    """
+    用于动转静的nn.Layer
+    """
+
+    def __init__(self, in_params, func):
+        super(BuildFunc, self).__init__()
+        self.func = eval(func)
+        self._params = in_params
+
+    def forward(self, inputs):
+        """
+        forward
+        """
+        x = self.func(**inputs, **self._params)
+        return x
+
+
+class BuildJitClass(paddle.nn.Layer):
+    """
+    用于动转静的nn.Layer
+    """
+
+    def __init__(self, in_params, func):
+        super(BuildJitClass, self).__init__()
+        self.func = eval(func)(**in_params)
+
+    @paddle.jit.to_static
+    def forward(self, inputs):
+        """
+        forward
+        """
+        x = self.func(*inputs)
+        return x
+
+
+class BuildJitFunc(paddle.nn.Layer):
+    """
+    用于动转静的nn.Layer
+    """
+
+    def __init__(self, in_params, func):
+        super(BuildJitFunc, self).__init__()
+        self.func = eval(func)
+        self._params = in_params
+
+    @paddle.jit.to_static
+    def forward(self, inputs):
+        """
+        forward
+        """
+        x = self.func(**inputs, **self._params)
+        return x
+
+
 def sort_intensor(input_dict):
     """对输入进行排序，构建一个新的输入list"""
     inputs_key = sorted(input_dict.keys())
@@ -44,6 +100,32 @@ def sort_intensor(input_dict):
     for k in inputs_key:
         inputs_value.append(input_dict[k])
     return inputs_value
+
+
+def mk_dict_spec(input_dict):
+    """根据输入的dict, 生成InputSpec"""
+    input_spec_dict = {}
+    for k, v in input_dict.items():
+        v_shape = v.shape
+        v_dtype = v.dtype
+        if k in ['x', 'y', 'x1', 'x2', 'data', 'data0', 'theta']:
+            v_shape[0] = None
+        print('{} shape is {}'.format(k, v_shape))
+        input_spec_dict[k] = InputSpec(shape=v_shape, dtype=v_dtype, name=k)
+    return input_spec_dict
+
+
+def mk_list_spec(input_dict):
+    """根据输入的dict, 生成InputSpec"""
+    input_spec_list = []
+    for k, v in input_dict.items():
+        v_shape = v.shape
+        v_dtype = v.dtype
+        if k in ['x', 'y', 'x1', 'x2', 'data', 'data0', 'theta']:
+            v_shape[0] = None
+        print('{} shape is {}'.format(k, v_shape))
+        input_spec_list.append(InputSpec(shape=v_shape, dtype=v_dtype, name=k))
+    return input_spec_list
 
 
 class Framework(object):
@@ -60,10 +142,6 @@ class JitTrans(WeakTrans):
 
         if isclass(eval(self.func)):
             self.func_type = 'class'
-            # 仅实例化一次，防止多次实例化后，因为随机种子不固定导致多个结果值res不相等
-            self.obj = BuildClass(self.in_params, self.func)
-            self.obj.eval()
-            self.jit_obj = paddle.jit.to_static(self.obj)
         else:
             self.func_type = 'func'
 
@@ -87,31 +165,59 @@ class JitTrans(WeakTrans):
 
         return in_tensor, in_params, func
 
-    def mk_exp(self):
+    def init_test_object(self, method):
+        if method == 'BuildClass' or method == 'BuildClassWithInputSpec':
+            # 仅实例化一次，防止多次实例化后，因为随机种子不固定导致多个结果值res不相等
+            obj = BuildClass(self.in_params, self.func)
+            obj.eval()
+        elif method == 'BuildFunc' or method == 'BuildFuncWithInputSpec':
+            obj = BuildFunc(self.in_params, self.func)
+            obj.eval()
+        elif method == "naive_func":
+            obj = naive_func
+
+        return obj
+
+    def mk_exp(self, obj, method):
         """获取动态图结果"""
-        if self.func_type == 'class':
+        if method == 'BuildClass' or method == 'BuildClassWithInputSpec':
             inputs_value = sort_intensor(self.in_tensor)
             # print('inputs_value is: ', inputs_value)
-            exp = self.obj(inputs_value)
-        else:
-            exp = test_jit(self.in_tensor, self.in_params, self.func)
-            # print('net is: ', test_jit)
+            exp = obj(inputs_value)
+        elif method == 'BuildFunc' or method == 'BuildFuncWithInputSpec':
+            exp = obj(self.in_tensor)
+        elif method == "naive_func":
+            exp = obj(self.in_tensor, self.in_params, self.func)
+            # print('net is: ', naive_func)
             # print(exp)
         return exp
 
-    def mk_res(self):
+    def mk_res(self, obj, method):
         """获取静态图结果"""
-        if self.func_type == 'class':
+        if method == 'BuildClass':
             inputs_value = sort_intensor(self.in_tensor)
-            res = self.jit_obj(inputs_value)
-        else:
-            jit = paddle.jit.to_static(test_jit)
-            res = jit(self.in_tensor, self.in_params, self.func)
+            jit_obj = paddle.jit.to_static(obj)
+            res = jit_obj(inputs_value)
+        elif method == 'BuildClassWithInputSpec':
+            inputs_value = sort_intensor(self.in_tensor)
+            input_spec = mk_list_spec(self.in_tensor)
+            jit_obj = paddle.jit.to_static(obj, input_spec=[input_spec])
+            res = jit_obj(inputs_value)
+        elif method == 'BuildFunc':
+            jit_obj = paddle.jit.to_static(obj)
+            res = jit_obj(self.in_tensor)
+        elif method == 'BuildFuncWithInputSpec':
+            input_spec = mk_dict_spec(self.in_tensor)
+            jit_obj = paddle.jit.to_static(obj, input_spec=[input_spec])
+            res = jit_obj(self.in_tensor)
+        elif method == "naive_func":
+            jit_obj = paddle.jit.to_static(obj)
+            res = jit_obj(self.in_tensor, self.in_params, self.func)
             # print('jit is: ', jit)
             # print(res)
         return res
 
-    def jit_save(self):
+    def jit_save(self, obj, method):
         """
         动转静保存模型，两种情况:
         1. 当self.func为class时，继承nn.Layer构建BuildClass类，
@@ -121,18 +227,32 @@ class JitTrans(WeakTrans):
         此时paddle.jit.save只输出 api.pdmodel一个文件
         后续只会比对测试paddle.jit.load加载api.pdmodel的输出结果
         """
-        if self.func_type == 'class':
+        if method == 'BuildClass':
             inputs_value = sort_intensor(self.in_tensor)
-            exp = self.jit_obj(inputs_value)  # 此行用于构建inputSpec,不可删除
-            paddle.jit.save(self.jit_obj, path=os.path.join(self.jit_save_path, self.get_func("paddle")))
-        else:
-            jit = paddle.jit.to_static(test_jit)
+            jit_obj = paddle.jit.to_static(obj)
+            exp = jit_obj(inputs_value)  # 此行用于构建inputSpec,不可删除
+            paddle.jit.save(jit_obj, path=os.path.join(self.jit_save_path, self.get_func("paddle")))
+        elif method == 'BuildClassWithInputSpec':
+            # inputs_value = sort_intensor(self.in_tensor)
+            input_spec = mk_list_spec(self.in_tensor)
+            paddle.jit.save(obj, path=os.path.join(self.jit_save_path, self.get_func("paddle")),
+                            input_spec=[input_spec])
+        elif method == 'BuildFunc':
+            jit_obj = paddle.jit.to_static(obj)
+            exp = jit_obj(self.in_tensor)  # 此行用于构建inputSpec,不可删除
+            paddle.jit.save(jit_obj, path=os.path.join(self.jit_save_path, self.get_func("paddle")))
+        elif method == 'BuildFuncWithInputSpec':
+            input_spec = mk_dict_spec(self.in_tensor)
+            # jit_obj = paddle.jit.to_static(obj, input_spec=[input_spec])
+            paddle.jit.save(obj, path=os.path.join(self.jit_save_path, self.get_func("paddle")), input_spec=[input_spec])
+        elif method == "naive_func":
+            jit_obj = paddle.jit.to_static(obj)
             # print("jit save start-----")
             # print("in_tensor is: {}".format(self.in_tensor))
             # print("in_params is: {}".format(self.in_params))
             # print("func is: {}".format(self.func))
-            exp = jit(self.in_tensor, self.in_params, self.func)  # 此行用于构建inputSpec,不可删除
-            paddle.jit.save(jit, path=os.path.join(self.jit_save_path, self.get_func("paddle")))
+            exp = jit_obj(self.in_tensor, self.in_params, self.func)  # 此行用于构建inputSpec,不可删除
+            paddle.jit.save(jit_obj, path=os.path.join(self.jit_save_path, self.get_func("paddle")))
 
     def jit_load(self):
         """paddle.jit.load加载"""
@@ -166,12 +286,22 @@ class JitTrans(WeakTrans):
 
     def jit_run(self):
         """测试运行流程"""
-        exp = self.mk_exp()
+        if self.func_type == 'class':
+            self.test_method(method='BuildClass')
+            # self.test_method(method='BuildClassWithInputSpec') # 需要进一步排查，涉及到某些有问题的api
+        else:
+            self.test_method(method='naive_func')
+            self.test_method(method='BuildFunc')
+            self.test_method(method='BuildFuncWithInputSpec')
+
+    def test_method(self, method):
+        obj = self.init_test_object(method)
+        exp = self.mk_exp(obj=obj, method=method)
         print('exp is: ', exp)
-        to_static_res = self.mk_res()
+        to_static_res = self.mk_res(obj=obj, method=method)
         print('to_static_res is: ', to_static_res)
         print('exp - to_static_res is: ', exp[0] - to_static_res[0])
-        self.jit_save()
+        self.jit_save(obj=obj, method=method)
         load_res = self.jit_load()
         print('load_res is: ', load_res)
         print('load_res[0] is: ', load_res[0])
@@ -187,6 +317,8 @@ class JitTrans(WeakTrans):
             if isinstance(exp, (list, tuple)):
                 exp = exp[0]
             compare(infer_res, exp, self.atol, self.rtol)
+        print('{} method {} test complete~~'.format(self.func, method))
+        del obj
 
 
 def compare(result, expect, delta=1e-10, rtol=1e-10):

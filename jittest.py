@@ -17,6 +17,6 @@ def test():
 
 
 yml = YamlLoader("nn.yml")
-jit_case = JitTrans(yml.get_case_info("Conv2D"), logger=yml.logger)
+jit_case = JitTrans(yml.get_case_info("Conv1D"), logger=yml.logger)
 jit_case.jit_run()
 

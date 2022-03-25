@@ -875,18 +875,18 @@ elu:
         range: [ -1, 5]
       alpha: 1.0
 
-elu_:
-  desc: "elu激活层, 对输入x采用Inplace策略"
-  paddle:
-    api_name: "paddle.nn.functional.elu_"
-    params:
-      x:
-        random: true
-        type: "Tensor"
-        dtype: "float32"
-        shape: [2, 3, 8, 8]
-        range: [ -1, 5]
-      alpha: 1.0
+#elu_:
+#  desc: "elu激活层, 对输入x采用Inplace策略"
+#  paddle:
+#    api_name: "paddle.nn.functional.elu_"
+#    params:
+#      x:
+#        random: true
+#        type: "Tensor"
+#        dtype: "float32"
+#        shape: [2, 3, 8, 8]
+#        range: [ -1, 5]
+#      alpha: 1.0
 
 gelu:
   desc: "gelu激活层"
@@ -901,20 +901,20 @@ gelu:
         range: [ -2, 5]
       approximate: False
 
-gumbel_softmax:
-  desc: "该OP实现了按Gumbel-Softmax分布进行采样的功能，通过hard可选择是否离散化"
-  paddle:
-    api_name: "paddle.nn.functional.gumbel_softmax"
-    params:
-      x:
-        random: true
-        type: "Tensor"
-        dtype: "float32"
-        shape: [2, 3, 8, 8]
-        range: [ -2, 5]
-      temperature: 1.0
-      hard: False
-      axis: -1
+#gumbel_softmax:
+#  desc: "该OP实现了按Gumbel-Softmax分布进行采样的功能，通过hard可选择是否离散化"
+#  paddle:
+#    api_name: "paddle.nn.functional.gumbel_softmax"
+#    params:
+#      x:
+#        random: true
+#        type: "Tensor"
+#        dtype: "float32"
+#        shape: [2, 3, 8, 8]
+#        range: [ -2, 5]
+#      temperature: 1.0
+#      hard: False
+#      axis: -1
 
 hardshrink:
   desc: "hardshrink激活函数"
@@ -1127,18 +1127,18 @@ softmax:
         range: [ -2, 5]
       axis: -1
 
-softmax_:
-  desc: "softmax_激活函数, 对输入 x 采用 Inplace 策略"
-  paddle:
-    api_name: "paddle.nn.functional.softmax_"
-    params:
-      x:
-        random: true
-        type: "Tensor"
-        dtype: "float32"
-        shape: [2, 4, 8, 8]
-        range: [ -2, 5]
-      axis: -1
+#softmax_:
+#  desc: "softmax_激活函数, 对输入 x 采用 Inplace 策略"
+#  paddle:
+#    api_name: "paddle.nn.functional.softmax_"
+#    params:
+#      x:
+#        random: true
+#        type: "Tensor"
+#        dtype: "float32"
+#        shape: [2, 4, 8, 8]
+#        range: [ -2, 5]
+#      axis: -1
 
 softplus:
   desc: "softplus激活函数"
@@ -1556,21 +1556,6 @@ gather_tree:
         dtype: "int32"
         value: [[[0, 0], [1, 1]], [[1, 0], [1, 0]], [[0, 0], [0, 1]]]
 
-unfold:
-  desc: "通被称作为im2col过程. 对于每一个输入形状为[N, C, H, W]的 x ，都将计算出一个形状为[N, Cout, Lout]的输出"
-  paddle:
-    api_name: "paddle.nn.functional.unfold"
-    params:
-        x:
-          random: true
-          type: "Tensor"
-          dtype: "float32"
-          shape: [5, 3, 8, 8]
-        kernel_sizes: [3, 3]
-        strides: 1
-        paddings: 0
-        dilations: 1
-
 #gather_tree0:
 #  desc: "在整个束搜索(Beam Search)结束后使用"
 #  paddle:
@@ -1588,6 +1573,21 @@ unfold:
 #        dtype: "int32"
 #        shape: [2, 3]
 #        range: [ 0, 10]
+
+unfold:
+  desc: "通被称作为im2col过程. 对于每一个输入形状为[N, C, H, W]的 x ，都将计算出一个形状为[N, Cout, Lout]的输出"
+  paddle:
+    api_name: "paddle.nn.functional.unfold"
+    params:
+        x:
+          random: true
+          type: "Tensor"
+          dtype: "float32"
+          shape: [5, 3, 8, 8]
+        kernel_sizes: [3, 3]
+        strides: 1
+        paddings: 0
+        dilations: 1
 
 glu:
   desc: "glu激活函数"
