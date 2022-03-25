@@ -11,16 +11,16 @@ from wt.logger import Logger
 
 
 # loading yaml
-yml = YamlLoader("./test.yml")
+yml = YamlLoader("nn.yml")
 
 cases = yml.get_all_case_name()
 
-for i in cases:
-    jit_case = WeakTrans(case=yml.get_case_info(i), logger=yml.logger)
-
-    layer = jit_case.get_layer("paddle")
-    loss = paddle.mean(layer)
-    yml.logger.get_log().info(loss)
+# for i in cases:
+#     jit_case = WeakTrans(case=yml.get_case_info(i), logger=yml.logger)
+#
+#     layer = jit_case.get_layer("paddle")
+#     loss = paddle.mean(layer)
+#     yml.logger.get_log().info(loss)
 
 for i in cases:
     jit_case = JitTrans(case=yml.get_case_info(i), logger=yml.logger)
