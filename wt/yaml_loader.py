@@ -4,7 +4,7 @@
 # encoding=utf-8 vi:ts=4:sw=4:expandtab:ft=python
 
 import yaml
-from wt.logger import Logger
+from wt.logger import Logger, logger
 
 
 class YamlLoader(object):
@@ -14,7 +14,7 @@ class YamlLoader(object):
                 self.yml = yaml.load(f, Loader=yaml.FullLoader)
         except Exception as e:
             print(e)
-        self.logger = Logger(__class__.__name__)
+        self.logger = logger
 
     def __str__(self):
         return str(self.yml)
@@ -27,7 +27,5 @@ class YamlLoader(object):
         # 获取全部case name
         return self.yml.keys()
 
-    def get_logger(self):
-        return self.logger
 
 

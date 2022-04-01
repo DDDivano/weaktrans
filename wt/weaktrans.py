@@ -6,6 +6,7 @@ import random
 
 import paddle
 import numpy as np
+from wt.logger import logger
 from inspect import isclass
 
 
@@ -15,7 +16,7 @@ class Framework(object):
 
 
 class WeakTrans(object):
-    def __init__(self, case, logger, default_type=np.float32, seed=None, ):
+    def __init__(self, case, default_type=np.float32, seed=None, ):
         np.random.seed(seed)
         self.case = case
         self.default_type = default_type
@@ -50,6 +51,13 @@ class WeakTrans(object):
             return obj(data)
         else:
             return eval(func)(**params)
+
+    def get_jit(self, framework):
+        # lazy func
+        func = self.get_func(framework)
+        params = self.get_input(framework)
+        return func, params
+
 
     def get_input(self, framework):
         # 获取参数输入
@@ -124,12 +132,14 @@ class WeakTrans(object):
             if value.get("random", False):
                 # 若开启random即进行自动数据生成,默认关闭
                 if value.get("type") == "Tensor":
+                    # Tensor自动生成
                     data_range = value.get("range", [-1, 1])
                     assert isinstance(data_range, list) and len(data_range) == 2
                     data = self._randtool(value.get("dtype", "float"),
                                           data_range[0],
                                           data_range[1],
                                           value.get("shape"))
+                # elif
             else:
                 data = value.get("value")
         else:

@@ -36,6 +36,9 @@ class Logger:
         return self.logger
 
 
+logger = Logger("weaktrans")
+
+
 if __name__ == '__main__':
     # test
     t = Logger("log").get_log().debug("Hello Logger %s" % '!')
