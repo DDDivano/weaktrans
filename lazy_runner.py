@@ -6,11 +6,12 @@
 import paddle
 from wt.yaml_loader import YamlLoader
 from wt.weaktrans import WeakTrans
+from wt.jittrans import JitTrans
 from wt.logger import Logger
 
 
 # loading yaml
-yml = YamlLoader("./test.yml")
+yml = YamlLoader("nn.yml")
 
 cases = yml.get_all_case_name()
 

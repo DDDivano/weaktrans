@@ -6,6 +6,18 @@ abs:
         x:
           random: true
           type: "Tensor"
+          dtype: "float32"
+          shape: [3, 3, 3]
+
+acos:
+  desc: "这里是个描述"
+  paddle:
+    api_name: "paddle.acos"
+    params:
+        x:
+          random: true
+          type: "Tensor"
+          dtype: "float32"
           shape: [3, 3, 3]
 
 add:
@@ -25,7 +37,27 @@ add:
           dtype: "float32"
           shape: [2, 2]
           range: [-100, 100]
-        
+
+cos:
+  desc: "这里是个描述"
+  paddle:
+    api_name: "paddle.cos"
+    params:
+        x:
+          random: true
+          type: "Tensor"
+          shape: [3, 3, 3]
+
+sin:
+  desc: "这里是个描述"
+  paddle:
+    api_name: "paddle.sin"
+    params:
+        x:
+          random: true
+          type: "Tensor"
+          shape: [3, 3, 3]
+
 conv2d:
   desc: "卷 积"
   paddle:
@@ -61,4 +93,3 @@ Conv2D:
         value: [3, 3]
       in_channels: 3
       out_channels: 1
-
